@@ -1,0 +1,341 @@
+// Prisma Schema for School Management System - RBAC Module
+// Enterprise-grade design with proper indexing and relationships
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE USER MANAGEMENT
+// ============================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  status        UserStatus @default(ACTIVE)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+  deletedAt     DateTime? // Soft delete
+  
+  // Relationships
+  roles         UserRole[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+  ruleLogs      RuleLog[]
+  
+  // Indexes for performance
+  @@index([email])
+  @@index([username])
+  @@index([status])
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+// ============================================
+// ROLE-BASED ACCESS CONTROL
+// ============================================
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  users       UserRole[]
+  permissions RolePermission[]
+  
+  @@index([name])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  resource    String   // e.g., "user", "role", "student"
+  action      String   // e.g., "create", "read", "update", "delete"
+  description String?
+  
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  roles       RolePermission[]
+  
+  // Composite unique constraint
+  @@unique([resource, action])
+  @@index([resource])
+  @@index([action])
+  @@map("permissions")
+}
+
+// ============================================
+// JUNCTION TABLES (Many-to-Many)
+// ============================================
+
+model UserRole {
+  id         String   @id @default(cuid())
+  userId     String
+  roleId     String
+  assignedBy String?  // Who assigned this role
+  assignedAt DateTime @default(now())
+  expiresAt  DateTime? // Optional role expiration
+  
+  // Relationships
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  // Prevent duplicate role assignments
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  grantedAt    DateTime @default(now())
+  
+  // Relationships
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  // Prevent duplicate permission assignments
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================
+// SESSION MANAGEMENT
+// ============================================
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  
+  createdAt    DateTime @default(now())
+  
+  // Relationships
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// ============================================
+// AUDIT LOGGING
+// ============================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  // Nullable for system actions
+  action      String   // e.g., "USER_CREATED", "ROLE_ASSIGNED"
+  resource    String   // e.g., "User", "Role"
+  resourceId  String?  // ID of affected resource
+  details     Json?    // Additional context
+  ipAddress   String?
+  userAgent   String?
+  status      AuditStatus @default(SUCCESS)
+  errorMessage String?
+  
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+  PENDING
+}
+
+// ============================================
+// RULES & REGULATIONS ENGINE
+// ============================================
+
+model Rule {
+  id              String      @id @default(cuid())
+  name            String
+  moduleName      String      // e.g., "attendance", "grades", "promotion"
+  description     String?
+  category        RuleCategory @default(ACADEMIC)
+  
+  // Condition Configuration
+  conditionType   ConditionType
+  conditionPayload Json       // Flexible JSON for complex conditions
+  
+  // Action Configuration
+  actionType      ActionType
+  actionPayload   Json?       // Additional action parameters
+  
+  // Rule Metadata
+  severityLevel   SeverityLevel @default(MEDIUM)
+  priority        Int         @default(100) // Lower number = higher priority
+  isActive        Boolean     @default(true)
+  
+  // Time-bound Rules
+  effectiveFrom   DateTime    @default(now())
+  effectiveTo     DateTime?
+  
+  // Versioning
+  version         Int         @default(1)
+  parentRuleId    String?     // For rule versioning
+  parentRule      Rule?       @relation("RuleVersions", fields: [parentRuleId], references: [id], onDelete: SetNull)
+  childRules      Rule[]      @relation("RuleVersions")
+  
+  // Audit
+  createdBy       String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relationships
+  logs            RuleLog[]
+  
+  @@index([moduleName])
+  @@index([isActive])
+  @@index([priority])
+  @@index([effectiveFrom, effectiveTo])
+  @@index([category])
+  @@map("rules")
+}
+
+model RuleLog {
+  id              String      @id @default(cuid())
+  ruleId          String
+  userId          String?
+  
+  // Evaluation Context
+  moduleName      String
+  action          String
+  resourceData    Json?
+  
+  // Evaluation Result
+  conditionMet    Boolean
+  actionTaken     ActionType
+  decision        RuleDecision
+  executionTimeMs Int         // Performance tracking
+  
+  // Additional Context
+  metadata        Json?
+  errorMessage    String?
+  
+  createdAt       DateTime    @default(now())
+  
+  // Relationships
+  rule            Rule        @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([ruleId])
+  @@index([userId])
+  @@index([moduleName])
+  @@index([createdAt])
+  @@index([decision])
+  @@map("rule_logs")
+}
+
+model RuleException {
+  id              String      @id @default(cuid())
+  ruleId          String
+  userId          String
+  reason          String
+  approvedBy      String
+  
+  effectiveFrom   DateTime    @default(now())
+  effectiveTo     DateTime
+  
+  isActive        Boolean     @default(true)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([ruleId])
+  @@index([userId])
+  @@index([isActive])
+  @@map("rule_exceptions")
+}
+
+// ============================================
+// ENUMS FOR RULES ENGINE
+// ============================================
+
+enum RuleCategory {
+  ACADEMIC
+  FINANCE
+  HR
+  ATTENDANCE
+  DISCIPLINE
+  LIBRARY
+  TRANSPORT
+  HOSTEL
+  GENERAL
+}
+
+enum ConditionType {
+  EXPRESSION      // JavaScript-like expression evaluation
+  THRESHOLD       // Numeric threshold comparison
+  TIME_BASED      // Time/date based conditions
+  ROLE_BASED      // Based on user roles
+  PERMISSION_BASED // Based on user permissions
+  COMPOSITE       // Multiple conditions combined
+}
+
+enum ActionType {
+  ALLOW
+  BLOCK
+  MODIFY
+  WARN
+  REQUIRE_APPROVAL
+}
+
+enum SeverityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RuleDecision {
+  ALLOWED
+  BLOCKED
+  MODIFIED
+  WARNING
+  APPROVAL_REQUIRED
+  ERROR
+}
