@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RulesService } from '@/services/rules.service';
-import { requirePermission } from '@/lib/rbac/guards';
-import { updateRuleSchema, idParamSchema, sanitizeObject } from '@/lib/validation/schemas';
+import { RulesService } from '@/modules/rules/rules.service';
+import { requirePermission } from '@/modules/rbac/guards';
+import { updateRuleSchema } from '@/modules/rules/validation';
+import { idParamSchema, sanitizeObject } from '@/modules/rbac/validation';
 import { ZodError } from 'zod';
 import { prisma } from '@/lib/db/prisma';
 
@@ -91,7 +92,7 @@ export async function PATCH(
     const validatedData = updateRuleSchema.parse(sanitizedBody);
 
     // Update rule (creates new version)
-    const rule = await RulesService.updateRule(id, validatedData, authCheck.userId!);
+    const rule = await RulesService.updateRule(id, validatedData, authCheck.context.user!.id);
 
     return NextResponse.json({
       success: true,
@@ -146,7 +147,7 @@ export async function DELETE(
       );
     }
 
-    await RulesService.toggleRuleStatus(id, false, authCheck.userId!);
+    await RulesService.toggleRuleStatus(id, false, authCheck.context.user!.id);
 
     return NextResponse.json({
       success: true,

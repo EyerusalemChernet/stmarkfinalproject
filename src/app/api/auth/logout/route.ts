@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/services/auth.service';
-import { verifyAuth } from '@/lib/rbac/guards';
-import { verifyAccessToken } from '@/lib/auth/jwt';
+import { AuthService } from '@/modules/auth/auth.service';
+import { buildRequestContext } from '@/modules/auth/context';
+import { verifyAccessToken } from '@/modules/auth/jwt';
 
 /**
  * POST /api/auth/logout
@@ -9,9 +9,9 @@ import { verifyAccessToken } from '@/lib/auth/jwt';
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = await verifyAuth(request);
+    const context = await buildRequestContext(request);
 
-    if (!userId) {
+    if (!context.isAuthenticated || !context.user) {
       return NextResponse.json(
         {
           success: false,
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') || undefined;
 
     // Logout
-    await AuthService.logout(payload.sessionId, userId, ipAddress, userAgent);
+    await AuthService.logout(payload.sessionId, context.user.id, ipAddress, userAgent);
 
     return NextResponse.json({
       success: true,

@@ -3,12 +3,23 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'bcrypt'],
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push('bcrypt');
+    }
+    // Ignore node-pre-gyp warnings
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'mock-aws-s3': false,
+      'aws-sdk': false,
+      'nock': false,
+    };
+    return config;
+  },
   typescript: {
-    // Temporarily ignore build errors during development
     ignoreBuildErrors: false,
   },
   eslint: {
-    // Temporarily ignore ESLint errors during development
     ignoreDuringBuilds: false,
   },
 }

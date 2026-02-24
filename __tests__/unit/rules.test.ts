@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { RulesService } from '@/services/rules.service';
+import { RulesService } from '@/modules/rules/rules.service';
 import { prisma } from '@/lib/db/prisma';
 import { RuleEvaluationContext } from '@/types';
 

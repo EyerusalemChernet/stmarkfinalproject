@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RoleService } from '@/services/role.service';
-import { requirePermission } from '@/lib/rbac/guards';
-import { createRoleSchema, sanitizeObject } from '@/lib/validation/schemas';
+import { RoleService } from '@/modules/rbac/role.service';
+import { requirePermission } from '@/modules/rbac/guards';
+import { createRoleSchema, sanitizeObject } from '@/modules/rbac/validation';
 import { ZodError } from 'zod';
 
 /**
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createRoleSchema.parse(sanitizedBody);
 
     // Create role
-    const role = await RoleService.createRole(validatedData, authCheck.userId!);
+    const role = await RoleService.createRole(validatedData, authCheck.context.user!.id);
 
     return NextResponse.json(
       {

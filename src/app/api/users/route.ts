@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UserService } from '@/services/user.service';
-import { requirePermission } from '@/lib/rbac/guards';
-import { createUserSchema, userFilterSchema, sanitizeObject } from '@/lib/validation/schemas';
+import { UserService } from '@/modules/rbac/user.service';
+import { requirePermission } from '@/modules/rbac/guards';
+import { createUserSchema, userFilterSchema, sanitizeObject } from '@/modules/rbac/validation';
 import { ZodError } from 'zod';
 
 /**
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createUserSchema.parse(sanitizedBody);
 
     // Create user
-    const user = await UserService.createUser(validatedData, authCheck.userId!);
+    const user = await UserService.createUser(validatedData, authCheck.context.user!.id);
 
     return NextResponse.json(
       {

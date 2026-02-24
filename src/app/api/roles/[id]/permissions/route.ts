@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RoleService } from '@/services/role.service';
-import { requirePermission } from '@/lib/rbac/guards';
-import { assignPermissionsSchema, idParamSchema } from '@/lib/validation/schemas';
+import { RoleService } from '@/modules/rbac/role.service';
+import { requirePermission } from '@/modules/rbac/guards';
+import { assignPermissionsSchema, idParamSchema } from '@/modules/rbac/validation';
 import { ZodError } from 'zod';
 
 /**
@@ -36,7 +36,7 @@ export async function PUT(
     const { permissionIds } = assignPermissionsSchema.parse(body);
 
     // Assign permissions
-    await RoleService.assignPermissions(id, permissionIds, authCheck.userId!);
+    await RoleService.assignPermissions(id, permissionIds, authCheck.context.user!.id);
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { UserService } from '@/services/user.service';
-import { RoleService } from '@/services/role.service';
+import { UserService } from '@/modules/rbac/user.service';
+import { RoleService } from '@/modules/rbac/role.service';
 import { prisma } from '@/lib/db/prisma';
 
 // Mock Prisma

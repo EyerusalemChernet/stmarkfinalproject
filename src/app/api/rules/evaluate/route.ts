@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RulesService } from '@/services/rules.service';
-import { verifyAuth } from '@/lib/rbac/guards';
-import { buildAuthUser } from '@/lib/rbac/permissions';
-import { ruleEvaluationSchema, sanitizeObject } from '@/lib/validation/schemas';
+import { RulesService } from '@/modules/rules/rules.service';
+import { buildRequestContext } from '@/modules/auth/context';
+import { buildAuthUser } from '@/modules/rbac/permissions';
+import { ruleEvaluationSchema } from '@/modules/rules/validation';
+import { sanitizeObject } from '@/modules/rbac/validation';
 import { ZodError } from 'zod';
 
 /**
@@ -12,9 +13,9 @@ import { ZodError } from 'zod';
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = await verifyAuth(request);
+    const context = await buildRequestContext(request);
 
-    if (!userId) {
+    if (!context.isAuthenticated || !context.user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     const validatedData = ruleEvaluationSchema.parse(sanitizedBody);
 
     // Build auth user with roles and permissions
-    const authUser = await buildAuthUser(userId);
+    const authUser = await buildAuthUser(context.user.id);
 
     if (!authUser) {
       return NextResponse.json(

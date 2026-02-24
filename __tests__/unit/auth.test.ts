@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { hashPassword, verifyPassword, validatePasswordStrength } from '@/lib/auth/password';
-import { generateAccessToken, verifyAccessToken } from '@/lib/auth/jwt';
+import { hashPassword, verifyPassword, validatePasswordStrength } from '@/modules/auth/password';
+import { generateAccessToken, verifyAccessToken } from '@/modules/auth/jwt';
 import { JWTPayload } from '@/types';
 
 describe('Password Utilities', () => {

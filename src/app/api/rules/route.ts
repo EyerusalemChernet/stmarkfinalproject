@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RulesService } from '@/services/rules.service';
-import { requirePermission } from '@/lib/rbac/guards';
-import { createRuleSchema, sanitizeObject } from '@/lib/validation/schemas';
+import { RulesService } from '@/modules/rules/rules.service';
+import { requirePermission } from '@/modules/rbac/guards';
+import { createRuleSchema } from '@/modules/rules/validation';
+import { sanitizeObject } from '@/modules/rbac/validation';
 import { prisma } from '@/lib/db/prisma';
 import { ZodError } from 'zod';
 
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createRuleSchema.parse(sanitizedBody);
 
     // Create rule
-    const rule = await RulesService.createRule(validatedData, authCheck.userId!);
+    const rule = await RulesService.createRule(validatedData, authCheck.context.user!.id);
 
     return NextResponse.json(
       {

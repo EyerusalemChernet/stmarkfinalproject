@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/services/auth.service';
-import { loginSchema, sanitizeObject } from '@/lib/validation/schemas';
+import { AuthService } from '@/modules/auth/auth.service';
+import { loginSchema } from '@/modules/auth/validation';
+import { sanitizeObject } from '@/modules/rbac/validation';
 import { ZodError } from 'zod';
 
 /**

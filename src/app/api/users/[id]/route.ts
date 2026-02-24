@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UserService } from '@/services/user.service';
-import { requirePermission } from '@/lib/rbac/guards';
-import { updateUserSchema, idParamSchema, sanitizeObject } from '@/lib/validation/schemas';
+import { UserService } from '@/modules/rbac/user.service';
+import { requirePermission } from '@/modules/rbac/guards';
+import { updateUserSchema, idParamSchema, sanitizeObject } from '@/modules/rbac/validation';
 import { ZodError } from 'zod';
 
 /**
@@ -104,7 +104,7 @@ export async function PATCH(
     const validatedData = updateUserSchema.parse(sanitizedBody);
 
     // Update user
-    const user = await UserService.updateUser(id, validatedData, authCheck.userId!);
+    const user = await UserService.updateUser(id, validatedData, authCheck.context.user!.id);
 
     return NextResponse.json({
       success: true,
@@ -171,7 +171,7 @@ export async function DELETE(
     }
 
     // Prevent self-deletion
-    if (id === authCheck.userId) {
+    if (id === authCheck.context.user!.id) {
       return NextResponse.json(
         {
           success: false,
@@ -182,7 +182,7 @@ export async function DELETE(
     }
 
     // Delete user
-    await UserService.deleteUser(id, authCheck.userId!);
+    await UserService.deleteUser(id, authCheck.context.user!.id);
 
     return NextResponse.json({
       success: true,

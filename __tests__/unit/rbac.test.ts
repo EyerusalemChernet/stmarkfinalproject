@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest, afterEach } from '@jest/globals';
 import { prisma } from '@/lib/db/prisma';
-import { getUserPermissions, hasPermission, hasAnyPermission, hasAllPermissions } from '@/lib/rbac/permissions';
+import { getUserPermissions, hasPermission, hasAnyPermission, hasAllPermissions } from '@/modules/rbac/permissions';
 
 // Mock Prisma
 jest.mock('@/lib/db/prisma', () => ({

@@ -34,11 +34,14 @@ model User {
   sessions      Session[]
   auditLogs     AuditLog[]
   ruleLogs      RuleLog[]
+  ruleExceptions RuleException[] @relation("UserExceptions")
+  approvedExceptions RuleException[] @relation("ApprovedByUser")
   
   // Indexes for performance
   @@index([email])
   @@index([username])
   @@index([status])
+  @@index([deletedAt]) // Soft delete performance
   @@map("users")
 }
 
@@ -136,7 +139,7 @@ model Session {
   id           String   @id @default(cuid())
   userId       String
   token        String   @unique
-  refreshToken String   @unique
+  refreshTokenHash String   @unique // Store hashed refresh tokens
   ipAddress    String?
   userAgent    String?
   expiresAt    DateTime
@@ -148,6 +151,7 @@ model Session {
   
   @@index([userId])
   @@index([token])
+  @@index([userId, expiresAt]) // Composite index for performance
   @@index([expiresAt])
   @@map("sessions")
 }
@@ -227,7 +231,9 @@ model Rule {
   
   // Relationships
   logs            RuleLog[]
+  exceptions      RuleException[]
   
+  @@unique([name, moduleName, version]) // Prevent duplicate rule names per module per version
   @@index([moduleName])
   @@index([isActive])
   @@index([priority])
@@ -275,7 +281,7 @@ model RuleException {
   ruleId          String
   userId          String
   reason          String
-  approvedBy      String
+  approvedById    String      // Changed from approvedBy to approvedById
   
   effectiveFrom   DateTime    @default(now())
   effectiveTo     DateTime
@@ -285,9 +291,15 @@ model RuleException {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   
+  // Relationships
+  rule            Rule        @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  user            User        @relation("UserExceptions", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy      User        @relation("ApprovedByUser", fields: [approvedById], references: [id], onDelete: Restrict)
+  
   @@index([ruleId])
   @@index([userId])
   @@index([isActive])
+  @@index([effectiveFrom, effectiveTo])
   @@map("rule_exceptions")
 }
 

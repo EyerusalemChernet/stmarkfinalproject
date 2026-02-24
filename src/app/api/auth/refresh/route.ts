@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/services/auth.service';
+import { AuthService } from '@/modules/auth/auth.service';
 import { z } from 'zod';
 
 const refreshSchema = z.object({
@@ -8,17 +8,20 @@ const refreshSchema = z.object({
 
 /**
  * POST /api/auth/refresh
- * Refresh access token using refresh token
+ * Refresh access token using refresh token with rotation and security hardening
  */
 export async function POST(request: NextRequest) {
+  const ipAddress = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+
   try {
     const body = await request.json();
 
     // Validate input
     const { refreshToken } = refreshSchema.parse(body);
 
-    // Refresh token
-    const result = await AuthService.refreshToken(refreshToken);
+    // Refresh token with rotation and security checks
+    const result = await AuthService.refreshTokenWithRotation(refreshToken, ipAddress, userAgent);
 
     if (!result) {
       return NextResponse.json(
