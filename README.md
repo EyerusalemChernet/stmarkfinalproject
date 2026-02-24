@@ -58,29 +58,6 @@ This is an enterprise-grade Role-Based Access Control (RBAC) module designed for
 - **Testing**: Jest
 - **Language**: TypeScript
 
-## Project Structure
-
-```
-school-management-system/
-├── prisma/
-│   ├── schema.prisma          # Database schema
-│   └── seed.ts                # Seed data
-├── src/
-│   ├── app/
-│   │   ├── api/               # API routes
-│   │   │   ├── auth/          # Authentication endpoints
-│   │   │   ├── users/         # User management endpoints
-│   │   │   └── roles/         # Role management endpoints
-│   │   └── middleware.ts      # Global middleware
-│   ├── lib/
-│   │   ├── auth/              # Authentication utilities
-│   │   ├── rbac/              # RBAC utilities
-│   │   ├── db/                # Database client
-│   │   └── validation/        # Validation schemas
-│   ├── services/              # Business logic layer
-│   └── types/                 # TypeScript types
-└── __tests__/                 # Test files
-```
 
 ## Installation
 
